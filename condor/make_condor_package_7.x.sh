@@ -373,7 +373,6 @@ rm -rf %{buildroot}
 %_libexecdir/rsh
 %_libexecdir/sshd.sh
 
-
 %_sbindir/condor_vm-gahp-vmware
 %_sbindir/cleanup_release
 %_sbindir/condor_cleanup_local
@@ -452,6 +451,13 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_set_shutdown.1.gz
 %_mandir/man1/condor_ssh_to_job.1.gz
 
+# Classad pieces
+%_bindir/classad_functional_tester
+%_bindir/classad_version
+%_usr/lib/libclassad.so
+%_usr/lib/libclassad.so.1
+%_usr/lib/libclassad.so.1.0.2
+%_usr/lib/libclassads.a
 
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor
