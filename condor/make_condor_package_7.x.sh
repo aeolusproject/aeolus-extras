@@ -586,6 +586,9 @@ fi
 
 
 %changelog
+* Sun Apr 24 2011  <jclift@redhat.com> - 7.6.1-0
+- Upgrade to work with 7.6.1 git development branch.
+
 * Wed Jan 12 2011  <imain@redhat.com> - 7.5.6-1
 - Upgrade to 7.5.6 release, redo build to use cmake.
 
@@ -961,11 +964,9 @@ EOF
 }
 
 
-#ORIG_RPM_PATH=/root/rpmbuild
-#PATH_TO_CONDOR=/root/condor
+# Create the Condor source tarball
 ORIG_RPM_PATH=$HOME/rpmbuild
 PATH_TO_CONDOR=$HOME/git_repos/condor
-#PATH_TO_CONDOR=$HOME/src/condor
 CONDOR_VERSION=`cd $PATH_TO_CONDOR ; grep 'set.VERSION' CMakeLists.txt | awk -F'"' '{print $2}'`
 RELEASE="$1"
 
@@ -981,20 +982,22 @@ tar -zcvf condor_src-$CONDOR_VERSION-all-all.tar.gz condor-$CONDOR_VERSION
 
 generate_tarball $CONDOR_VERSION
 
-rm -rf /tmp/condor-rpm
-mkdir -p /tmp/condor-rpm/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
-cd /tmp/condor-rpm
-generate_spec /tmp/condor-rpm/SPECS/condor.spec
-cp /tmp/condor-$CONDOR_VERSION-UNKNOWN-RH.tar.gz /tmp/condor-rpm/SOURCES
-generate_config_patch /tmp/condor-rpm/SOURCES/condor_config.generic.patch
-generate_chkconfig_patch /tmp/condor-rpm/SOURCES/chkconfig_off.patch
-generate_log_lock_patch /tmp/condor-rpm/SOURCES/log_lock_run.patch
-generate_unstripped_patch /tmp/condor-rpm/SOURCES/only_dynamic_unstripped.patch
-generate_have_dlopen_patch /tmp/condor-rpm/SOURCES/have_dlopen.patch
+# Set up the RPM build environment
+mkdir -p $ORIG_RPM_PATH/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+cd $ORIG_RPM_PATH
+generate_spec $ORIG_RPM_PATH/SPECS/condor.spec
+cp /tmp/condor-$CONDOR_VERSION-UNKNOWN-RH.tar.gz $ORIG_RPM_PATH/SOURCES
+generate_config_patch $ORIG_RPM_PATH/SOURCES/condor_config.generic.patch
+generate_chkconfig_patch $ORIG_RPM_PATH/SOURCES/chkconfig_off.patch
+generate_log_lock_patch $ORIG_RPM_PATH/SOURCES/log_lock_run.patch
+generate_unstripped_patch $ORIG_RPM_PATH/SOURCES/only_dynamic_unstripped.patch
+generate_have_dlopen_patch $ORIG_RPM_PATH/SOURCES/have_dlopen.patch
 
 sed -i -e "s/^Version:.*/Version: $CONDOR_VERSION/" \
     -e "s/^Release:.*/Release: $RELEASE%{?dist}/" \
     -e "s/^Source0:.*/Source0: condor-$CONDOR_VERSION-UNKNOWN-RH.tar.gz/" \
-    /tmp/condor-rpm/SPECS/condor.spec
+    $ORIG_RPM_PATH/SPECS/condor.spec
 
-rpmbuild --define '_topdir /tmp/condor-rpm' --define '_sourcedir /tmp/condor-rpm/SOURCES' --define '_srcrpmdir /tmp/condor-rpm/SRPMS' --define '_rpmdir /tmp/condor-rpm/RPMS' --define '_builddir /tmp/condor-rpm/BUILDROOT' -bs /tmp/condor-rpm/SPECS/condor.spec
+# Build the binary Condor packages
+rpmbuild -bb $ORIG_RPM_PATH/SPECS/condor.spec
+
