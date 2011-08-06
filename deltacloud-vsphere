@@ -1,0 +1,131 @@
+#!/bin/sh
+#
+# deltacloud-vsphere       startup script for deltacloud-vsphere daemon
+#
+# chkconfig: - 97 03
+# description: deltacloud-vsphere is the primary server process for the \
+#    Deltacloud vSphere component.
+#
+
+### BEGIN INIT INFO
+# Provides: deltacloud-vsphere
+# Required-Start:
+# Required-Stop:
+# Default-Start: 3 5
+# Default-Stop: 0 1 2 6
+# Short-Description: Deltacloud vSphere API daemon
+# Description: Deltacloud vSphere provides access to vSphere using a REST API
+### END INIT INFO
+
+. /etc/init.d/functions
+
+[ -r /etc/sysconfig/deltacloud-vsphere ] && . /etc/sysconfig/deltacloud-vsphere
+
+# Set the commonly adjusted variables
+#
+# These can be overidden using /etc/sysconfig/deltacloud-vsphere
+#
+# ENV=production|development
+# DRIVER=ec2|mock|vsphere
+# PORT=3005|any valid, unused port number
+#
+ENV="${ENV:-production}"
+DRIVER="${DRIVER:-vsphere}"
+PORT="${PORT:-3005}"
+
+# Set the mock storage directory 
+GEMDIR=`gem env gemdir`
+export DELTACLOUD_MOCK_STORAGE="${GEMDIR}/gems/deltacloud-vsphere-0.3.0/lib/deltacloud/drivers/mock/data/"
+
+# Set the other file locations
+LOCKFILE="${LOCKFILE:-/var/lock/subsys/deltacloud-vsphere }"
+LOGDIR="${LOGDIR:-/var/log/deltacloud-vsphere}"
+LOGFILE="${LOGFILE:-$LOGDIR/$DRIVER.log}"
+PIDFILE="${THIN_PID:-/var/run/deltacloud-vsphere.pid}"
+
+PROG="/usr/bin/deltacloudd"
+
+STARTTIMEOUT=20
+
+# Create the log file directory if not already present
+[ ! -d $LOGDIR ] && mkdir -p $LOGDIR
+
+start() {
+    echo -n "Starting deltacloud-vsphere: "
+
+  if [ -f $LOCKFILE ] || [ -f $PIDFILE ] && checkpid `cat $PIDFILE` ; then
+    echo_success
+    echo
+    echo "deltacloud-$DRIVER has already been started"
+    exit 0
+  fi
+
+  # JC Note: This seems to always give a return value of 0, even
+  #          when deltacloudd doesn't start (ie due to bad chmod)
+  $PROG -i $DRIVER -e $ENV -p $PORT >> $LOGFILE 2>&1 &
+  RETVAL=$?
+  echo $! > $PIDFILE
+  if [ $RETVAL -eq 0 ] ; then
+    TIMEOUT="$STARTTIMEOUT"
+	  while [ $TIMEOUT -gt 0 ]; do
+      /usr/bin/curl --silent http://localhost:$PORT/api >& /dev/null
+      RETVAL=$?
+      if [ $RETVAL -eq 0 ] ; then
+        touch $LOCKFILE
+        echo_success
+        echo
+        exit 0
+      fi
+      sleep 1
+      let TIMEOUT=${TIMEOUT}-1
+    done
+  fi
+
+  echo_failure
+  echo
+  exit 1
+}
+
+stop() {
+    echo -n "Shutting down deltacloud-vsphere: "
+
+    # We do a killproc -p <pidfile> here to ensure other deltacloud
+    # daemons are not killed as well
+    killproc -p $PIDFILE deltacloudd
+    RETVAL=$?
+    if [ $RETVAL -eq 0 ] && rm -f $LOCKFILE ; then
+      echo_success
+      echo
+    else
+      echo_failure
+      echo
+    fi
+}
+
+case "$1" in
+    start)
+      start
+      ;;
+    stop)
+      stop
+      ;;
+    restart)
+      stop
+      start
+      ;;
+    reload)
+      ;;
+    force-reload)
+      restart
+      ;;
+    status)
+      status -p $PIDFILE $PROG
+      RETVAL=$?
+      ;;
+    *)
+      echo "Usage: deltacloud-vsphere {start|stop|restart|status}"
+      exit 1
+  ;;
+esac
+
+exit $RETVAL
