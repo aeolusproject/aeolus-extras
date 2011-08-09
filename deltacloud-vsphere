@@ -31,7 +31,7 @@
 #
 ENV="${ENV:-production}"
 DRIVER="${DRIVER:-vsphere}"
-PORT="${PORT:-3005}"
+PORT="${PORT:-3006}"
 
 # Set the mock storage directory 
 GEMDIR=`gem env gemdir`
