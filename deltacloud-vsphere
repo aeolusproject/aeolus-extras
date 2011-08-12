@@ -27,7 +27,7 @@
 #
 # ENV=production|development
 # DRIVER=ec2|mock|vsphere
-# PORT=3005|any valid, unused port number
+# PORT=3006|any valid, unused port number
 #
 ENV="${ENV:-production}"
 DRIVER="${DRIVER:-vsphere}"
