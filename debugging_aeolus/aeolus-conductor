@@ -1,0 +1,35 @@
+#!/bin/bash
+#
+#
+# aeolus-conductor       startup script for *debugging* aeolus-conductor
+#
+# chkconfig: - 99 01
+# description: aeolus-conductor is the primary server process for 
+#    Aeolus Conductor
+#
+
+[ -r /etc/sysconfig/conductor-rails ] && . /etc/sysconfig/conductor-rails
+
+[ -r /etc/sysconfig/aeolus-conductor ] && . /etc/sysconfig/aeolus-conductor
+
+RAILS_ENV="${RAILS_ENV:-production}"
+CONDUCTOR_DIR="${CONDUCTOR_DIR:-/usr/share/aeolus-conductor}"
+CONDUCTOR_USER="${CONDUCTOR_USER:-aeolus}"
+CONDUCTOR_GROUP="${CONDUCTOR_GROUP:-aeolus}"
+THIN_PROG="${THIN_PROG:-thin}"
+THIN_PID="${THIN_PID:-/var/run/aeolus-conductor/thin.pid}"
+THIN_LOG="${THIN_LOG:-/var/log/aeolus-conductor/thin.log}"
+THIN_LOCKFILE="${THIN_LOCKFILE:-/var/lock/subsys/aeolus-conductor}"
+PREFIX="${PREFIX:-/conductor}"
+ADDR="${ADDR:-127.0.0.1}"
+
+export RAILS_RELATIVE_URL_ROOT=$PREFIX
+
+RETVAL=0
+STARTTIMEOUT=60
+
+. /etc/init.d/functions
+
+$THIN_PROG start -c "$CONDUCTOR_DIR" -l "$THIN_LOG" -P "$THIN_PID" \
+-a $ADDR -e $RAILS_ENV --user $CONDUCTOR_USER -g $CONDUCTOR_GROUP -D --prefix=$PREFIX \
+--rackup "$CONDUCTOR_DIR/config.ru" -A rails
